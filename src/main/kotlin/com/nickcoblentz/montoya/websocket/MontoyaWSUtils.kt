@@ -2,7 +2,6 @@ package com.nickcoblentz.montoya.websocket
 
 import burp.api.montoya.BurpExtension
 import burp.api.montoya.MontoyaApi
-import burp.api.montoya.proxy.websocket.ProxyWebSocket
 import burp.api.montoya.proxy.websocket.ProxyWebSocketCreation
 import burp.api.montoya.proxy.websocket.ProxyWebSocketCreationHandler
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider
@@ -14,17 +13,14 @@ import burp.api.montoya.ui.settings.SettingsPanelPersistence
 import com.nickcoblentz.montoya.settings.PanelSettingsDelegate
 import java.awt.BorderLayout
 import java.awt.Component
-import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
-import java.awt.Toolkit
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import javax.swing.JButton
 import javax.swing.JComboBox
-import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JMenuItem
 import javax.swing.JPanel
@@ -34,25 +30,35 @@ import javax.swing.JTextField
 // Montoya API Documentation: https://portswigger.github.io/burp-extensions-montoya-api/javadoc/burp/api/montoya/MontoyaApi.html
 // Montoya Extension Examples: https://github.com/PortSwigger/burp-extensions-montoya-api-examples
 
-class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketCreationHandler {
+class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketCreationHandler {
     private val proxyWebSocketCreations = mutableListOf<ProxyWebSocketCreation>()
     private var webSocketMessages: MutableList<WebSocketMessage> = mutableListOf()
     private val executorService = Executors.newVirtualThreadPerTaskExecutor()
-    private val virtualThreadLimit = Semaphore(5)
+
 
 
     private lateinit var api: MontoyaApi
-    //private val projectSettings : MyProjectSettings by lazy { MyProjectSettings() }
+    private val projectSettings : MyProjectSettings by lazy { MyProjectSettings() }
+    private var virtualThreadLimitSemaphore = Semaphore(DEFAULT_WS_REQUEST_LIMIT)
+    private var currentThreadLimit = DEFAULT_WS_REQUEST_LIMIT
 
     private val showUpgradeRequestMenuItem = JMenuItem("Show Upgrade Request")
     private val showIntruderIntegerMenu = JMenuItem("Intruder: Integers")
 
     companion object {
         const val EXTENSION_NAME = "WS Utils"
+        const val DEFAULT_WS_REQUEST_LIMIT = 25
     }
 
 
 
+    private fun resetSemaphore() {
+        if(projectSettings.wsRequestLimit != currentThreadLimit) {
+            virtualThreadLimitSemaphore = Semaphore(projectSettings.wsRequestLimit)
+            currentThreadLimit = projectSettings.wsRequestLimit
+        }
+        api.logging().logToOutput("WebSocket Request Limit set to: $currentThreadLimit")
+    }
 
     override fun initialize(api: MontoyaApi?) {
 
@@ -72,7 +78,9 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
         // Code for setting up your extension starts here...
 
 
-        //api.userInterface().registerSettingsPanel(projectSettings.settingsPanel)
+        api.userInterface().registerSettingsPanel(projectSettings.settingsPanel)
+
+        resetSemaphore()
 
         showUpgradeRequestMenuItem.addActionListener {
             webSocketMessages.forEach { message ->
@@ -157,6 +165,7 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                 val startButton = JButton("Start")
 
                 startButton.addActionListener {
+                    resetSemaphore()
                     val startInteger = startIntegerField.text.toInt()
                     val endInteger = endIntegerField.text.toInt()
                     val replaceString = replaceField.text
@@ -246,7 +255,7 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
 
     fun runVirtualThreadWithLimit(runnable: Runnable) {
         executorService.submit {
-            virtualThreadLimit.acquire()
+            virtualThreadLimitSemaphore.acquire()
             try {
                 runnable.run()
             }
@@ -254,7 +263,7 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                 api.logging().logToError("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
             }
             finally {
-                virtualThreadLimit.release()
+                virtualThreadLimitSemaphore.release()
             }
         }
     }
@@ -264,14 +273,14 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
 class MyProjectSettings() {
     val settingsPanelBuilder : SettingsPanelBuilder = SettingsPanelBuilder.settingsPanel()
         .withPersistence(SettingsPanelPersistence.PROJECT_SETTINGS) // you can change this to user settings if you wish
-        .withTitle(YourBurpKotlinExtensionName.EXTENSION_NAME)
+        .withTitle(MontoyaWSUtils.EXTENSION_NAME)
         .withDescription("Add your description here")
         .withKeywords("Add Keywords","Here")
 
     private val settingsManager = PanelSettingsDelegate(settingsPanelBuilder)
 
-    val example1Setting: String by settingsManager.stringSetting("An example string setting here", "test default value here")
-    val example2Setting: Boolean by settingsManager.booleanSetting("An example boolean setting here", false)
+    val wsRequestLimit: Int by settingsManager.integerSetting("Limit the number of WebSocket messages sent at one time to:",
+        MontoyaWSUtils.DEFAULT_WS_REQUEST_LIMIT)
 
     val settingsPanel = settingsManager.buildSettingsPanel()
 }
