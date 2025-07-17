@@ -251,7 +251,7 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                 runnable.run()
             }
             catch (e: Exception) {
-                api.logging().logToOutput("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
+                api.logging().logToError("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
             }
             finally {
                 virtualThreadLimit.release()
