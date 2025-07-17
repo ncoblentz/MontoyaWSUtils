@@ -194,6 +194,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                                     }
                                     else {
                                         api.logging().logToOutput("Proxy WebSocket Connection is no longer there...")
+                                        api.logging().logToError("Proxy WebSocket Connection is no longer there... $index: ${selectedProxyCreation?.upgradeRequest()?.url()}")
                                     }
                                 }
                             }
