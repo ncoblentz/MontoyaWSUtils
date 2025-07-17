@@ -31,6 +31,12 @@ import javax.swing.JTextField
 // Montoya Extension Examples: https://github.com/PortSwigger/burp-extensions-montoya-api-examples
 
 class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketCreationHandler {
+
+    companion object {
+        const val EXTENSION_NAME = "WS Utils"
+        const val DEFAULT_WS_REQUEST_LIMIT = 25
+    }
+
     private val proxyWebSocketCreations = mutableListOf<ProxyWebSocketCreation>()
     private var webSocketMessages: MutableList<WebSocketMessage> = mutableListOf()
     private val executorService = Executors.newVirtualThreadPerTaskExecutor()
@@ -44,12 +50,6 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
     private val showUpgradeRequestMenuItem = JMenuItem("Show Upgrade Request")
     private val showIntruderIntegerMenu = JMenuItem("Intruder: Integers")
-
-    companion object {
-        const val EXTENSION_NAME = "WS Utils"
-        const val DEFAULT_WS_REQUEST_LIMIT = 25
-    }
-
 
 
     private fun resetSemaphore() {
@@ -279,7 +279,7 @@ class MyProjectSettings() {
 
     private val settingsManager = PanelSettingsDelegate(settingsPanelBuilder)
 
-    val wsRequestLimit: Int by settingsManager.integerSetting("Limit the number of WebSocket messages sent at one time to:",
+    val wsRequestLimit: Int by settingsManager.integerSetting("Limit the number of WebSocket messages sent at one time to",
         MontoyaWSUtils.DEFAULT_WS_REQUEST_LIMIT)
 
     val settingsPanel = settingsManager.buildSettingsPanel()
