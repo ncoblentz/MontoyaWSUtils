@@ -168,6 +168,8 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                             Thread.ofVirtual().start {
                                 val newMessage = message.payload().toString().replace(replaceString, i.toString())
                                 api.logging()
+                                    .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n-------------------")
+                                api.logging()
                                     .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
                                 proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
                             }
