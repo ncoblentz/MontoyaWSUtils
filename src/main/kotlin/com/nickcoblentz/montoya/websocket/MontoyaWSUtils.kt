@@ -162,6 +162,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                     val endInteger = endIntegerField.text.toInt()
                     val replaceString = replaceField.text
 
+                    Thread.ofVirtual().start {
                     val selectedWebSocketConnection = webSocketConnectionsComboBox.selectedItem as String
                     selectedWebSocketConnection.substringBefore(" ").toIntOrNull()?.let { index ->
                         api.logging().logToOutput("Starting WS Intruder on connection $index")
@@ -170,17 +171,27 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
                         val proxyCreation = proxyWebSocketCreations[index]
                         for(i in startInteger..endInteger) {
-                            runVirtualThreadWithLimit {
-                                val newMessage = message.payload().toString().replace(replaceString, i.toString())
-                                api.logging()
-                                    .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n-------------------")
-                                api.logging()
-                                    .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
-                                proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
+                            virtualThreadLimitSemaphore.acquire()
+                            try {
+                                Thread.ofVirtual().start {
+                                    val newMessage = message.payload().toString().replace(replaceString, i.toString())
+                                    api.logging()
+                                        .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n-------------------")
+                                    api.logging()
+                                        .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
+                                    proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
+                                }
+                            }
+                            catch (e: Exception) {
+                                api.logging().logToError("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
+                            }
+                            finally {
+                                virtualThreadLimitSemaphore.release()
                             }
                         }
 
                     }
+                        }
 
 
                 }
@@ -245,20 +256,6 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
         }
     }
 
-    fun runVirtualThreadWithLimit(runnable: Runnable) {
-        executorService.submit {
-            virtualThreadLimitSemaphore.acquire()
-            try {
-                runnable.run()
-            }
-            catch (e: Exception) {
-                api.logging().logToError("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
-            }
-            finally {
-                virtualThreadLimitSemaphore.release()
-            }
-        }
-    }
 }
 
 
