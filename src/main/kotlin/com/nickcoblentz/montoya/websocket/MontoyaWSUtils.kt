@@ -62,20 +62,12 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
     override fun initialize(api: MontoyaApi?) {
 
-        // In Kotlin, you have to explicitly define variables as nullable with a ? as in MontoyaApi? above
-        // This is necessary because the Java Library allows null to be passed into this function
-        // requireNotNull is a built-in Kotlin function to check for null that throws an Illegal Argument exception if it is null
-        // after checking for null, the Kotlin compiler knows that any reference to api  or this.api below will not = null and you no longer have to check it
-        // Finally, assign the MontoyaApi instance (not nullable) to a class property to be accessible from other functions in this class
         this.api = requireNotNull(api) { "api : MontoyaApi is not allowed to be null" }
         // This will print to Burp Suite's Extension output and can be used to debug whether the extension loaded properly
         api.logging().logToOutput("Started loading the extension...")
 
 
-        // Name our extension when it is displayed inside of Burp Suite
         api.extension().setName(EXTENSION_NAME)
-
-        // Code for setting up your extension starts here...
 
 
         api.userInterface().registerSettingsPanel(projectSettings.settingsPanel)
@@ -89,7 +81,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                     requestEditor.request=upgradeRequest
                     val burpFrame = BurpGuiFrame("HTTP Request Editor - " + upgradeRequest.url())
 
-                    burpFrame.frame.contentPane.add(requestEditor.uiComponent(), BorderLayout.CENTER);
+                    burpFrame.frame.contentPane.add(requestEditor.uiComponent(), BorderLayout.CENTER)
                     burpFrame.showFrame()
                 }
             }
@@ -104,7 +96,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                     val item = "$index ${creation.upgradeRequest().url()}"
                     api.logging().logToOutput("Adding item to combo box: $item")
                     item
-                }.toTypedArray())
+                }.reversed().toTypedArray())
 
                 val startIntegerField = JTextField("0", 10) // Default start value, 10 columns wide
                 val endIntegerField = JTextField("100", 10) // Default end value, 10 columns wide
@@ -208,7 +200,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                 gbc.anchor = GridBagConstraints.CENTER
                 mainPanel.add(buttonPanel, gbc)
 
-                burpFrame.frame.contentPane.add(mainPanel, BorderLayout.CENTER);
+                burpFrame.frame.contentPane.add(mainPanel, BorderLayout.CENTER)
 
                 burpFrame.showFrame()
             }
