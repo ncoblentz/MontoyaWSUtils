@@ -165,9 +165,12 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                         if(proxyCreationsArray.size>=index-1) {
                             val proxyCreation = proxyCreationsArray[index]
                             for(i in startInteger..endInteger) {
-                                val newMessage = message.payload().toString().replace(replaceString,i.toString())
-                                api.logging().logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
-                                proxyCreation.proxyWebSocket().sendTextMessage(newMessage,message.direction())
+                                Thread.ofVirtual().start {
+                                    val newMessage = message.payload().toString().replace(replaceString, i.toString())
+                                    api.logging()
+                                        .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
+                                    proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
+                                }
                             }
                         }
                     }
