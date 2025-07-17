@@ -20,6 +20,8 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
 import java.awt.Toolkit
+import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JFrame
@@ -35,6 +37,8 @@ import javax.swing.JTextField
 class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketCreationHandler {
     private val proxyWebSocketCreations = mutableListOf<ProxyWebSocketCreation>()
     private var webSocketMessages: MutableList<WebSocketMessage> = mutableListOf()
+    private val executorService = Executors.newVirtualThreadPerTaskExecutor()
+    private val virtualThreadLimit = Semaphore(5)
 
 
     private lateinit var api: MontoyaApi
@@ -165,7 +169,7 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
 
                         val proxyCreation = proxyWebSocketCreations[index]
                         for(i in startInteger..endInteger) {
-                            Thread.ofVirtual().start {
+                            runVirtualThreadWithLimit {
                                 val newMessage = message.payload().toString().replace(replaceString, i.toString())
                                 api.logging()
                                     .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n-------------------")
@@ -237,6 +241,21 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
         proxyWebSocketCreation?.let {creation ->
             proxyWebSocketCreations.add(creation)
             api.logging().logToOutput("WebSocket Connection Created: ${creation.upgradeRequest().url()}")
+        }
+    }
+
+    fun runVirtualThreadWithLimit(runnable: Runnable) {
+        executorService.submit {
+            virtualThreadLimit.acquire()
+            try {
+                runnable.run()
+            }
+            catch (e: Exception) {
+                api.logging().logToOutput("Error running virtual thread: ${e.message}\n${e.stackTraceToString()}")
+            }
+            finally {
+                virtualThreadLimit.release()
+            }
         }
     }
 }
