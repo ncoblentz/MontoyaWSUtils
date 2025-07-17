@@ -45,6 +45,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
         const val DEFAULT_WS_REQUEST_LIMIT = 25
     }
 
+    private var selectedProxyCreation: ProxyWebSocketCreation? = null
     private val proxyWebSocketCreations = mutableListOf<ProxyWebSocketCreation>()
     private var webSocketMessages: MutableList<WebSocketMessage> = mutableListOf()
     private val executorService = Executors.newVirtualThreadPerTaskExecutor()
@@ -58,6 +59,7 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
     private val showUpgradeRequestMenuItem = JMenuItem("Show Upgrade Request")
     private val showIntruderIntegerMenu = JMenuItem("Intruder: Integers")
+    private var selectedWebSocketMessage: WebSocketMessage? = null
 
 
     private fun resetSemaphore() {
@@ -177,17 +179,22 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
                         api.logging().logToOutput("Replace Value Found?: ${message.payload().toString().contains(replaceString)}")
 
-                        val proxyCreation = proxyWebSocketCreations[index]
+                        selectedProxyCreation = proxyWebSocketCreations[index]
                         for(i in startInteger..endInteger) {
                             virtualThreadLimitSemaphore.acquire()
                             try {
                                 Thread.ofVirtual().start {
                                     val newMessage = message.payload().toString().replace(replaceString, i.toString())
                                     api.logging()
-                                        .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n-------------------")
-                                    api.logging()
-                                        .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
-                                    proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
+                                        .logToOutput("Current Progress ====================\n$startInteger <= $i <= $endInteger \n${selectedProxyCreation} ${selectedProxyCreation?.proxyWebSocket()}\n-------------------")
+                                    if(proxyWebSocketCreations.contains(selectedProxyCreation)) {
+                                        api.logging()
+                                            .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
+                                        selectedProxyCreation?.proxyWebSocket()?.sendTextMessage(newMessage, message.direction())
+                                    }
+                                    else {
+                                        api.logging().logToOutput("Proxy WebSocket Connection is no longer there...")
+                                    }
                                 }
                             }
                             catch (e: Exception) {
