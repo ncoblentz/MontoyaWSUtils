@@ -2,14 +2,22 @@ package com.nickcoblentz.montoya.websocket
 
 import burp.api.montoya.BurpExtension
 import burp.api.montoya.MontoyaApi
+import burp.api.montoya.proxy.websocket.BinaryMessageReceivedAction
+import burp.api.montoya.proxy.websocket.BinaryMessageToBeSentAction
+import burp.api.montoya.proxy.websocket.InterceptedBinaryMessage
+import burp.api.montoya.proxy.websocket.InterceptedTextMessage
+import burp.api.montoya.proxy.websocket.ProxyMessageHandler
 import burp.api.montoya.proxy.websocket.ProxyWebSocketCreation
 import burp.api.montoya.proxy.websocket.ProxyWebSocketCreationHandler
+import burp.api.montoya.proxy.websocket.TextMessageReceivedAction
+import burp.api.montoya.proxy.websocket.TextMessageToBeSentAction
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider
 import burp.api.montoya.ui.contextmenu.WebSocketContextMenuEvent
 import burp.api.montoya.ui.contextmenu.WebSocketMessage
 import burp.api.montoya.ui.editor.EditorOptions
 import burp.api.montoya.ui.settings.SettingsPanelBuilder
 import burp.api.montoya.ui.settings.SettingsPanelPersistence
+import burp.api.montoya.websocket.extension.ExtensionWebSocketMessageHandler
 import com.nickcoblentz.montoya.settings.PanelSettingsDelegate
 import java.awt.BorderLayout
 import java.awt.Component
@@ -251,10 +259,35 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
 
     override fun handleWebSocketCreation(proxyWebSocketCreation: ProxyWebSocketCreation?) {
         proxyWebSocketCreation?.let {creation ->
+            creation.proxyWebSocket().registerProxyMessageHandler((object : ProxyMessageHandler {
+                override fun handleTextMessageReceived(interceptedTextMessage: InterceptedTextMessage): TextMessageReceivedAction {
+                    return TextMessageReceivedAction.continueWith(interceptedTextMessage)
+                }
+
+                override fun handleTextMessageToBeSent(interceptedTextMessage: InterceptedTextMessage?): TextMessageToBeSentAction {
+                    return TextMessageToBeSentAction.continueWith(interceptedTextMessage)
+                }
+
+                override fun handleBinaryMessageReceived(interceptedBinaryMessage: InterceptedBinaryMessage?): BinaryMessageReceivedAction {
+                    return BinaryMessageReceivedAction.continueWith(interceptedBinaryMessage)
+                }
+
+                override fun handleBinaryMessageToBeSent(interceptedBinaryMessage: InterceptedBinaryMessage?): BinaryMessageToBeSentAction {
+                    return BinaryMessageToBeSentAction.continueWith(interceptedBinaryMessage)
+                }
+
+                override fun onClose() {
+                    super.onClose()
+                    proxyWebSocketCreations.remove(creation)
+                    api.logging().logToOutput("Removing one - closed")
+
+                }
+            }))
             proxyWebSocketCreations.add(creation)
             api.logging().logToOutput("WebSocket Connection Created: ${creation.upgradeRequest().url()}")
         }
     }
+
 
 }
 
