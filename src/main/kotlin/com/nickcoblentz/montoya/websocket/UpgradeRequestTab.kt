@@ -1,4 +1,4 @@
-package UpgradeRequestTab
+package com.nickcoblentz.montoya.websocket
 
 import burp.api.montoya.MontoyaApi
 import burp.api.montoya.core.ByteArray
@@ -8,7 +8,8 @@ import burp.api.montoya.ui.editor.extension.EditorCreationContext
 import burp.api.montoya.ui.editor.extension.ExtensionProvidedWebSocketMessageEditor
 import java.awt.Component
 
-class UpgradeRequestTab (api: MontoyaApi, creationContext: EditorCreationContext?) : ExtensionProvidedWebSocketMessageEditor {
+class UpgradeRequestTab (api: MontoyaApi, creationContext: EditorCreationContext?) :
+    ExtensionProvidedWebSocketMessageEditor {
     override fun getMessage(): ByteArray? {
         TODO("Not yet implemented")
     }
