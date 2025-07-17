@@ -289,6 +289,10 @@ class MontoyaWSUtils : BurpExtension , ContextMenuItemsProvider, ProxyWebSocketC
                     proxyWebSocketCreations.remove(creation)
                     api.logging().logToOutput("Removing one - closed")
 
+                    if(projectSettings.wsBumpWSConnection && selectedProxyCreation != null) {
+                        selectedProxyCreation = proxyWebSocketCreations.lastOrNull()
+                    }
+
                 }
             }))
             proxyWebSocketCreations.add(creation)
@@ -311,6 +315,8 @@ class MyProjectSettings() {
 
     val wsRequestLimit: Int by settingsManager.integerSetting("Limit the number of WebSocket messages sent at one time to",
         MontoyaWSUtils.DEFAULT_WS_REQUEST_LIMIT)
+
+    val wsBumpWSConnection: Boolean by settingsManager.booleanSetting("Automatically Reconnect to Next WS Connection Matching Upgrade Request", false)
 
     val settingsPanel = settingsManager.buildSettingsPanel()
 }
