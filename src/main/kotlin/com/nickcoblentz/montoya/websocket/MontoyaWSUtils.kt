@@ -86,9 +86,10 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
         showIntruderIntegerMenu.addActionListener {
             webSocketMessages.forEach { message ->
                 val burpFrame = BurpGuiFrame("WS Intruder")
-                var count = 0
-                val webSocketConnectionsComboBox = JComboBox(proxyWebSocketCreations.map { creation ->
-                    val item = "${count++} ${creation.upgradeRequest().url()}"
+
+                val webSocketConnectionsComboBox = JComboBox(proxyWebSocketCreations.indices.map { index ->
+                    val creation = proxyWebSocketCreations[index]
+                    val item = "$index ${creation.upgradeRequest().url()}"
                     api.logging().logToOutput("Adding item to combo box: $item")
                     item
                 }.toTypedArray())
@@ -159,20 +160,19 @@ class YourBurpKotlinExtensionName : BurpExtension , ContextMenuItemsProvider, Pr
                     val selectedWebSocketConnection = webSocketConnectionsComboBox.selectedItem as String
                     selectedWebSocketConnection.substringBefore(" ").toIntOrNull()?.let { index ->
                         api.logging().logToOutput("Starting WS Intruder on connection $index")
-                        val proxyCreationsArray = proxyWebSocketCreations.toTypedArray()
-                        api.logging().logToOutput("Array size ${proxyCreationsArray.size}")
+
                         api.logging().logToOutput("Replace Value Found?: ${message.payload().toString().contains(replaceString)}")
-                        if(proxyCreationsArray.size>=index-1) {
-                            val proxyCreation = proxyCreationsArray[index]
-                            for(i in startInteger..endInteger) {
-                                Thread.ofVirtual().start {
-                                    val newMessage = message.payload().toString().replace(replaceString, i.toString())
-                                    api.logging()
-                                        .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
-                                    proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
-                                }
+
+                        val proxyCreation = proxyWebSocketCreations[index]
+                        for(i in startInteger..endInteger) {
+                            Thread.ofVirtual().start {
+                                val newMessage = message.payload().toString().replace(replaceString, i.toString())
+                                api.logging()
+                                    .logToOutput("Sending Message (${message.direction()}):\n$newMessage\n-----------------")
+                                proxyCreation.proxyWebSocket().sendTextMessage(newMessage, message.direction())
                             }
                         }
+
                     }
 
 
